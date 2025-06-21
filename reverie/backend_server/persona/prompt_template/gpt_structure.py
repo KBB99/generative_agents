@@ -4,14 +4,16 @@ Author: Joon Sung Park (joonspk@stanford.edu)
 File: gpt_structure.py
 Description: Wrapper functions for calling OpenAI APIs.
 """
+import os
 import json
 import random
-import openai
+from openai import OpenAI
+
+client = OpenAI(api_key="")
 import time 
 
 from utils import *
 
-openai.api_key = openai_api_key
 
 def temp_sleep(seconds=0.1):
   time.sleep(seconds)
@@ -19,11 +21,9 @@ def temp_sleep(seconds=0.1):
 def ChatGPT_single_request(prompt): 
   temp_sleep()
 
-  completion = openai.ChatCompletion.create(
-    model="gpt-3.5-turbo", 
-    messages=[{"role": "user", "content": prompt}]
-  )
-  return completion["choices"][0]["message"]["content"]
+  completion = client.chat.completions.create(model="gpt-3.5-turbo", 
+  messages=[{"role": "user", "content": prompt}])
+  return completion.choices[0].message.content
 
 
 # ============================================================================
@@ -45,12 +45,10 @@ def GPT4_request(prompt):
   temp_sleep()
 
   try: 
-    completion = openai.ChatCompletion.create(
-    model="gpt-4", 
-    messages=[{"role": "user", "content": prompt}]
-    )
-    return completion["choices"][0]["message"]["content"]
-  
+    completion = client.chat.completions.create(model="gpt-4", 
+    messages=[{"role": "user", "content": prompt}])
+    return completion.choices[0].message.content
+
   except: 
     print ("ChatGPT ERROR")
     return "ChatGPT ERROR"
@@ -70,12 +68,10 @@ def ChatGPT_request(prompt):
   """
   # temp_sleep()
   try: 
-    completion = openai.ChatCompletion.create(
-    model="gpt-3.5-turbo", 
-    messages=[{"role": "user", "content": prompt}]
-    )
-    return completion["choices"][0]["message"]["content"]
-  
+    completion = client.chat.completions.create(model="gpt-3.5-turbo", 
+    messages=[{"role": "user", "content": prompt}])
+    return completion.choices[0].message.content
+
   except: 
     print ("ChatGPT ERROR")
     return "ChatGPT ERROR"
@@ -105,10 +101,10 @@ def GPT4_safe_generate_response(prompt,
       end_index = curr_gpt_response.rfind('}') + 1
       curr_gpt_response = curr_gpt_response[:end_index]
       curr_gpt_response = json.loads(curr_gpt_response)["output"]
-      
+
       if func_validate(curr_gpt_response, prompt=prompt): 
         return func_clean_up(curr_gpt_response, prompt=prompt)
-      
+
       if verbose: 
         print ("---- repeat count: \n", i, curr_gpt_response)
         print (curr_gpt_response)
@@ -149,10 +145,10 @@ def ChatGPT_safe_generate_response(prompt,
       # print ("---ashdfaf")
       # print (curr_gpt_response)
       # print ("000asdfhia")
-      
+
       if func_validate(curr_gpt_response, prompt=prompt): 
         return func_clean_up(curr_gpt_response, prompt=prompt)
-      
+
       if verbose: 
         print ("---- repeat count: \n", i, curr_gpt_response)
         print (curr_gpt_response)
@@ -207,21 +203,20 @@ def GPT_request(prompt, gpt_parameter):
     a str of GPT-3's response. 
   """
   temp_sleep()
-  try: 
-    response = openai.Completion.create(
-                model=gpt_parameter["engine"],
-                prompt=prompt,
-                temperature=gpt_parameter["temperature"],
-                max_tokens=gpt_parameter["max_tokens"],
-                top_p=gpt_parameter["top_p"],
-                frequency_penalty=gpt_parameter["frequency_penalty"],
-                presence_penalty=gpt_parameter["presence_penalty"],
-                stream=gpt_parameter["stream"],
-                stop=gpt_parameter["stop"],)
-    return response.choices[0].text
-  except: 
-    print ("TOKEN LIMIT EXCEEDED")
-    return "TOKEN LIMIT EXCEEDED"
+  # try: 
+  response = client.completions.create(model=gpt_parameter["engine"],
+  prompt=prompt,
+  temperature=gpt_parameter["temperature"],
+  max_tokens=gpt_parameter["max_tokens"],
+  top_p=gpt_parameter["top_p"],
+  frequency_penalty=gpt_parameter["frequency_penalty"],
+  presence_penalty=gpt_parameter["presence_penalty"],
+  stream=gpt_parameter["stream"],
+  stop=gpt_parameter["stop"])
+  return response.choices[0].text
+  # except: 
+  #   print ("TOKEN LIMIT EXCEEDED")
+  #   return "TOKEN LIMIT EXCEEDED"
 
 
 def generate_prompt(curr_input, prompt_lib_file): 
@@ -274,15 +269,12 @@ def safe_generate_response(prompt,
 
 
 def get_embedding(text, model="text-embedding-ada-002"):
-  text = text.replace("\n", " ")
-  if not text: 
-    text = "this is blank"
-  return openai.Embedding.create(
-          input=[text], model=model)['data'][0]['embedding']
+    text = text.replace("\n", " ")
+    return client.embeddings.create(input = [text], model=model).data[0].embedding
 
 
 if __name__ == '__main__':
-  gpt_parameter = {"engine": "text-davinci-003", "max_tokens": 50, 
+  gpt_parameter = {"engine": "gpt-3.5-turbo-instruct", "max_tokens": 50, 
                    "temperature": 0, "top_p": 1, "stream": False,
                    "frequency_penalty": 0, "presence_penalty": 0, 
                    "stop": ['"']}
@@ -309,23 +301,3 @@ if __name__ == '__main__':
                                  True)
 
   print (output)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
