@@ -11,27 +11,29 @@ This repository accompanies our research paper titled "[Generative Agents: Inter
 ## <img src="https://joonsungpark.s3.amazonaws.com:443/static/assets/characters/profile/Isabella_Rodriguez.png" alt="Generative Isabella">   Setting Up the Environment 
 To set up your environment, you will need to generate a `utils.py` file that contains your OpenAI API key and download the necessary packages.
 
-### Step 1. Generate Utils File
-In the `reverie/backend_server` folder (where `reverie.py` is located), create a new file titled `utils.py` and copy and paste the content below into the file:
+### Step 1. Set Up OpenAI API Key (Secure Method)
+The simulation requires an OpenAI API key for agent cognition. For security, use environment variables instead of hard-coding keys:
+
+**Option A: Environment Variable (Recommended)**
+```bash
+export OPENAI_API_KEY="your-api-key-here"
+export KEY_OWNER="Your Name"
 ```
-# Copy and paste your OpenAI API Key
-openai_api_key = "<Your OpenAI API>"
-# Put your name
-key_owner = "<Name>"
 
-maze_assets_loc = "../../environment/frontend_server/static_dirs/assets"
-env_matrix = f"{maze_assets_loc}/the_ville/matrix"
-env_visuals = f"{maze_assets_loc}/the_ville/visuals"
-
-fs_storage = "../../environment/frontend_server/storage"
-fs_temp_storage = "../../environment/frontend_server/temp_storage"
-
-collision_block_id = "32125"
-
-# Verbose 
-debug = True
+**Option B: Using .env File**
+```bash
+cp .env.example .env
+# Edit .env with your actual API key
+source .env
 ```
-Replace `<Your OpenAI API>` with your OpenAI API key, and `<name>` with your name.
+
+**Option C: Local Development Only**
+If you need to hard-code for local testing, uncomment and modify the fallback line in `reverie/backend_server/utils.py`:
+```python
+# openai_api_key = "your-api-key-here"
+```
+
+**Security Note**: The `utils.py` file is already configured to load from environment variables. Never commit API keys to version control. The `.env` file is automatically ignored by git.
  
 ### Step 2. Install requirements.txt
 Install everything listed in the `requirements.txt` file (I strongly recommend first setting up a virtualenv as usual). A note on Python version: we tested our environment on Python 3.9.12. 
@@ -86,6 +88,72 @@ We've noticed that OpenAI's API can hang when it reaches the hourly rate limit. 
 
 ## <img src="https://joonsungpark.s3.amazonaws.com:443/static/assets/characters/profile/Maria_Lopez.png" alt="Generative Maria">   Simulation Storage Location
 All simulations that you save will be located in `environment/frontend_server/storage`, and all compressed demos will be located in `environment/frontend_server/compressed_storage`. 
+
+## <img src="https://joonsungpark.s3.amazonaws.com:443/static/assets/characters/profile/Klaus_Mueller.png" alt="Generative Klaus">   Understanding Simulation Data Flow
+
+### Frontend-Backend Architecture
+The simulation uses a **dual-server architecture** that requires both servers to run simultaneously:
+
+**Backend Server** (`reverie/backend_server/reverie.py`):
+- Reads `environment/{step}.json` files (agent positions)
+- Processes agent cognition via GPT calls
+- Writes `movement/{step}.json` files (agent decisions and movements)
+
+**Frontend Server** (`environment/frontend_server/manage.py`):
+- Reads `movement/{step}.json` files
+- Updates world state and agent positions
+- Writes `environment/{step+1}.json` files
+
+### Step-by-Step Data Flow
+```
+Step N:
+1. Backend reads environment/{N}.json
+2. Backend processes agent decisions (GPT calls)
+3. Backend writes movement/{N}.json
+4. Frontend reads movement/{N}.json  
+5. Frontend updates positions
+6. Frontend writes environment/{N+1}.json
+7. Cycle repeats for Step N+1
+```
+
+### File Structure Per Simulation Step
+```
+simulation_name/
+├── environment/
+│   ├── 0.json  ← Initial positions
+│   ├── 1.json  ← Updated positions after step 0
+│   └── 2.json  ← Updated positions after step 1
+├── movement/
+│   ├── 0.json  ← Agent actions for step 0
+│   └── 1.json  ← Agent actions for step 1
+└── personas/    ← Agent memory and state
+```
+
+### Manual Step Continuation
+If simulation gets stuck waiting for environment files, you can manually create them:
+
+1. **Check current step**: Look at `temp_storage/curr_step.json`
+2. **Read latest movement**: Check `movement/{current_step}.json` for new positions
+3. **Create environment file**: Write `environment/{next_step}.json` with updated positions
+4. **Resume simulation**: Backend will continue automatically
+
+### Example: Creating Environment File
+```json
+{
+  "Isabella Rodriguez": {"maze": "the_ville", "x": 76, "y": 15},
+  "Maria Lopez": {"maze": "the_ville", "x": 72, "y": 20},
+  "Klaus Mueller": {"maze": "the_ville", "x": 100, "y": 30}
+}
+```
+
+### Resuming Interrupted Simulations
+To resume from an existing simulation:
+```bash
+python reverie.py
+# Enter existing simulation name as "forked simulation"
+# Enter new name for resumed simulation
+# run N  # Continue for N more steps
+```
 
 ## <img src="https://joonsungpark.s3.amazonaws.com:443/static/assets/characters/profile/Sam_Moore.png" alt="Generative Sam">   Customization
 

@@ -8,11 +8,12 @@ import os
 import json
 import random
 from openai import OpenAI
-
-client = OpenAI(api_key="")
 import time 
 
 from utils import *
+
+# Initialize OpenAI client with API key from utils
+client = OpenAI(api_key=openai_api_key)
 
 
 def temp_sleep(seconds=0.1):
